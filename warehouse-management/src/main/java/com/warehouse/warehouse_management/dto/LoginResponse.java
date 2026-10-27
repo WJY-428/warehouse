@@ -1,0 +1,14 @@
+package com.warehouse.warehouse_management.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+/** 登录成功返回：token + 脱敏后的用户信息 */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class LoginResponse {
+    private String token;
+    private UserVO user;
+}

@@ -1,6 +1,6 @@
-import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
   plugins: [vue()],
@@ -10,11 +10,12 @@ export default defineConfig({
     }
   },
   server: {
+    port: 5173,
     proxy: {
+      // 后端 context-path 就是 /api，所以这里原样转发，不做 rewrite
       '/api': {
-        target: 'http://localhost:8081',  // 后端接口地址
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '/api')
+        target: 'http://localhost:8081',
+        changeOrigin: true
       }
     }
   }
