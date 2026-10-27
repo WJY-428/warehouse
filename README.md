@@ -24,7 +24,7 @@
 
 - **登录**：账号密码登录，成功后签发 JWT，后续接口通过 `Authorization: Bearer <token>` 鉴权；密码 BCrypt 存储，接口响应永远不含密码。
 - **仓库管理**：新增、编辑、分页查询（按编码/名称/地址/管理员搜索）、删除（仓库里有入库记录时拒绝删除）。
-- **商品管理**：新增、编辑、分页查询（按 SKU/名称/分类搜索）、删除（连带清理该商品的入库记录）。
+- **商品管理**：新增、编辑、分页查询（按 SKU/名称/分类搜索）、删除（连带清理该商品的入库记录）。编辑商品时不允许修改库存，库存只能由入库累加、撤销入库扣回；新建时可设置初始库存。
 - **入库管理**：新增入库（写记录 + 累加商品库存，同一事务）、撤销入库（扣回库存 + 删记录）、分页查询。
 - **统一返回与异常**：所有接口返回 `{ code, message, data }`；参数校验失败返回 400 并给出字段级提示；业务异常返回明确文案；未预期的异常统一记录日志并返回 500 兜底文案，不向前端泄漏堆栈。
 
@@ -111,7 +111,7 @@ cd warehouse-management
 mvn test
 ```
 
-测试用 H2 内存库，不依赖本地 MySQL；覆盖登录鉴权、分页搜索、参数校验、入库加库存、撤销回库存、删除保护等 13 个场景。
+测试用 H2 内存库，不依赖本地 MySQL；覆盖登录鉴权、分页搜索、参数校验、入库加库存、撤销回库存、编辑不改库存、删除保护等 15 个场景。
 
 ### 6. 常见启动报错
 
@@ -125,12 +125,12 @@ mvn test
 
 ## 五、接口清单
 
-统一前缀 `/api`，除登录/注册外都需要 `Authorization: Bearer <token>`。
+统一前缀 `/api`，除登录外都需要 `Authorization: Bearer <token>`；注册接口同样需要登录，当前不对外开放。
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | POST | `/user/login` | 登录，返回 token 与用户信息 |
-| POST | `/user/register` | 注册 |
+| POST | `/user/register` | 注册（需登录，前端未提供入口） |
 | GET | `/user/me` | 当前登录人 |
 | GET | `/warehouse/list?keyword=&page=1&size=10` | 仓库分页查询 |
 | GET | `/warehouse/options` | 仓库下拉列表 |
@@ -164,6 +164,7 @@ mvn test
 **2. 入库时记录和库存怎么保证一致？**
 `InboundRecordService#create` 上标注 `@Transactional`：先查商品与仓库是否存在（不存在抛业务异常），再 `stock += quantity` 保存商品，最后保存记录。任一步失败整体回滚，不会出现「记录写了但库存没加」。
 撤销入库同理：先校验 `当前库存 >= 本次入库数量`，否则拒绝（避免负库存），然后扣减并删除记录。
+反过来，商品编辑接口会忽略前端传来的 `stock` 字段，避免绕过事件直接改状态；新建商品时可以设置初始库存，之后只能通过入库/撤销入库变更。
 
 **3. JWT 鉴权流程**
 登录 → `JwtUtil.generate()` 用 HMAC-SHA 签名，subject 存 userId、claim 存 username → 前端把 token 存 localStorage，axios 请求拦截器统一加 `Authorization` 头 → 后端 `AuthInterceptor` 解析校验，成功则把 userId/username 放进 request attribute，失败直接返回 HTTP 401 + `{code:401}`。前端响应拦截器遇到 401 清空本地 token 并跳转登录页。

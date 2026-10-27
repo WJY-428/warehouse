@@ -242,6 +242,32 @@ class WarehouseApiTests {
     }
 
     @Test
+    @DisplayName("编辑商品不会覆盖入库累加出来的库存")
+    void updatingProductKeepsStock() throws Exception {
+        String token = adminToken();
+        long productId = createProduct(token, "SKU-UPD", "编辑库存测试商品");
+        long warehouseId = createWarehouse(token, "WH-UPD");
+
+        mockMvc.perform(post("/inbound/save")
+                .header("Authorization", "Bearer " + token)
+                .contentType(JSON)
+                .content("{\"productId\":" + productId + ",\"warehouseId\":" + warehouseId + ",\"quantity\":25}")
+        ).andReturn();
+        assertEquals(25, detail(token, "/product/" + productId).path("data").path("stock").asInt());
+
+        // 编辑商品时故意把 stock 传成 0，库存必须保持不变
+        JsonNode updated = json(mockMvc.perform(put("/product/" + productId)
+                .header("Authorization", "Bearer " + token)
+                .contentType(JSON)
+                .content("{\"sku\":\"SKU-UPD\",\"name\":\"编辑后的商品\",\"category\":\"测试\",\"price\":1.50,\"stock\":0}")
+        ).andReturn());
+
+        assertEquals(200, updated.path("code").asInt(), updated.toString());
+        assertEquals("编辑后的商品", updated.path("data").path("name").asText());
+        assertEquals(25, detail(token, "/product/" + productId).path("data").path("stock").asInt(), "编辑商品不应覆盖库存");
+    }
+
+    @Test
     @DisplayName("数量校验：quantity=0 被拦截（否则可以刷空记录）")
     void inboundQuantityMustBePositive() throws Exception {
         String token = adminToken();

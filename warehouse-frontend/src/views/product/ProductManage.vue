@@ -62,9 +62,9 @@
         <el-form-item label="单价" prop="price">
           <el-input-number v-model="form.price" :min="0" :precision="2" :step="1" style="width: 100%" />
         </el-form-item>
-        <el-form-item label="库存" prop="stock">
+        <el-form-item v-if="!isEdit" label="初始库存" prop="stock">
           <el-input-number v-model="form.stock" :min="0" :step="1" style="width: 100%" />
-          <div class="hint">库存建议通过「入库管理」累加，这里仅作初始调整</div>
+          <div class="hint">库存由「入库管理」维护；这里只设置新建时的初始值，编辑时不可修改</div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -147,7 +147,6 @@ const openEdit = (row) => {
   form.name = row.name
   form.category = row.category
   form.price = Number(row.price ?? 0)
-  form.stock = row.stock ?? 0
   dialogVisible.value = true
 }
 

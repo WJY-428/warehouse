@@ -71,7 +71,7 @@ public class ProductService {
         existing.setName(form.getName());
         existing.setCategory(form.getCategory());
         existing.setPrice(form.getPrice());
-        existing.setStock(form.getStock() == null ? 0 : form.getStock());
+        // 库存只能由入库/撤销入库变更，编辑商品时忽略前端传入的 stock
         return productRepository.save(existing);
     }
 
